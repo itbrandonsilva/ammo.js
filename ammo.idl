@@ -23,6 +23,88 @@ interface btVector4 {
 };
 btVector4 implements btVector3;
 
+interface btSimplexSolverInterface {
+
+};
+
+interface btConvexPenetrationDepthSolver {
+
+};
+
+interface btVoronoiSimplexSolver {
+    void btVoronoiSimplexSolver();
+};
+btVoronoiSimplexSolver implements btSimplexSolverInterface;
+
+interface btMinkowskiPenetrationDepthSolver {
+    void btMinkowskiPenetrationDepthSolver();
+};
+btMinkowskiPenetrationDepthSolver implements btConvexPenetrationDepthSolver;
+
+interface btCollisionAlgorithm {
+
+};
+
+interface btConvex2dConvex2dAlgorithm {
+
+};
+btConvex2dConvex2dAlgorithm implements btCollisionAlgorithm;
+
+
+interface btBox2dBox2dCollisionAlgorithm {
+
+};
+
+interface btCollisionAlgorithmCreateFunc {
+
+};
+
+[Prefix="btConvex2dConvex2dAlgorithm::"]
+interface CreateFunc {
+    void CreateFunc(btSimplexSolverInterface simplexSolver, btConvexPenetrationDepthSolver pdSolver);
+};
+CreateFunc implements btCollisionAlgorithmCreateFunc;
+
+/* enum BroadphaseNativeTypes {
+    "BOX_SHAPE_PROXYTYPE",
+    "TRIANGLE_SHAPE_PROXYTYPE",
+    "TETRAHEDRAL_SHAPE_PROXYTYPE",
+    "CONVEX_TRIANGLEMESH_SHAPE_PROXYTYPE",
+    "CONVEX_HULL_SHAPE_PROXYTYPE",
+    "CONVEX_POINT_CLOUD_SHAPE_PROXYTYPE",
+    "CUSTOM_POLYHEDRAL_SHAPE_TYPE",
+    "IMPLICIT_CONVEX_SHAPES_START_HERE",
+    "SPHERE_SHAPE_PROXYTYPE",
+    "MULTI_SPHERE_SHAPE_PROXYTYPE",
+    "CAPSULE_SHAPE_PROXYTYPE",
+    "CONE_SHAPE_PROXYTYPE",
+    "CONVEX_SHAPE_PROXYTYPE",
+    "CYLINDER_SHAPE_PROXYTYPE",
+    "UNIFORM_SCALING_SHAPE_PROXYTYPE",
+    "MINKOWSKI_SUM_SHAPE_PROXYTYPE",
+    "MINKOWSKI_DIFFERENCE_SHAPE_PROXYTYPE",
+    "BOX_2D_SHAPE_PROXYTYPE",
+    "CONVEX_2D_SHAPE_PROXYTYPE",
+    "CUSTOM_CONVEX_SHAPE_TYPE",
+    "CONCAVE_SHAPES_START_HERE",
+    "TRIANGLE_MESH_SHAPE_PROXYTYPE",
+    "SCALED_TRIANGLE_MESH_SHAPE_PROXYTYPE",
+    "FAST_CONCAVE_MESH_PROXYTYPE",
+    "TERRAIN_SHAPE_PROXYTYPE",
+    "GIMPACT_SHAPE_PROXYTYPE",
+    "MULTIMATERIAL_TRIANGLE_MESH_PROXYTYPE",
+    "EMPTY_SHAPE_PROXYTYPE",
+    "STATIC_PLANE_PROXYTYPE",
+    "CUSTOM_CONCAVE_SHAPE_TYPE",
+    "CONCAVE_SHAPES_END_HERE",
+    "COMPOUND_SHAPE_PROXYTYPE",
+    "SOFTBODY_SHAPE_PROXYTYPE",
+    "HFFLUID_SHAPE_PROXYTYPE",
+    "HFFLUID_BUOYANT_CONVEX_SHAPE_PROXYTYPE",
+    "INVALID_SHAPE_PROXYTYPE",
+    "MAX_BROADPHASE_COLLISION_TYPES"
+}; */
+
 interface btQuadWord {
   float x();
   float y();
@@ -37,11 +119,13 @@ interface btQuadWord {
 interface btQuaternion {
   void btQuaternion(float x, float y, float z, float w);
   void setValue(float x, float y, float z, float w);
+  void setEuler(float yaw, float pitch, float roll);
 };
 btQuaternion implements btQuadWord;
 
 interface btMatrix3x3 {
   void setEulerZYX(float ex, float ey, float ez);
+  //void getEulerXYZ([Ref] btVector3 vector);
   void getRotation([Ref] btQuaternion q);
 };
 
@@ -71,6 +155,7 @@ btDefaultMotionState implements btMotionState;
 // Collision
 
 interface btCollisionObject {
+  void btCollisionObject();
   void setAnisotropicFriction([Const, Ref] btVector3 anisotropicFriction, long frictionMode);
   btCollisionShape getCollisionShape();
   void setContactProcessingThreshold(float contactProcessingThreshold);
@@ -89,31 +174,13 @@ interface btCollisionObject {
   void setCollisionShape (btCollisionShape collisionShape);
   void setCcdMotionThreshold (float ccdMotionThreshold);
   void setCcdSweptSphereRadius (float radius);
+  long getCompanionId();
+  void setCompanionId(long id);
 };
 
 [NoDelete]
 interface btCollisionObjectWrapper {
 };
-
-[Prefix="btCollisionWorld::"]
-interface RayResultCallback {
-  // abstract base class, no constructor
-  boolean hasHit();
-  attribute short m_collisionFilterGroup;
-  attribute short m_collisionFilterMask;
-  [Const] attribute btCollisionObject m_collisionObject;
-};
-
-[Prefix="btCollisionWorld::"]
-interface ClosestRayResultCallback {
-  void ClosestRayResultCallback([Const, Ref] btVector3 from, [Const, Ref] btVector3 to);
-
-  [Value] attribute btVector3 m_rayFromWorld;
-  [Value] attribute btVector3 m_rayToWorld;
-  [Value] attribute btVector3 m_hitNormalWorld;
-  [Value] attribute btVector3 m_hitPointWorld;
-};
-ClosestRayResultCallback implements RayResultCallback;
 
 interface btManifoldPoint {
   [Const, Ref] btVector3 getPositionWorldOnA();
@@ -127,8 +194,35 @@ interface btManifoldPoint {
 };
 
 [Prefix="btCollisionWorld::"]
+interface LocalRayResult {
+    void LocalRayResult([Const] btCollisionObject collisionObject, LocalShapeInfo localShapeInfo, [Const, Ref] btVector3 hitNormalLocal, float hitFraction);
+    [Const] attribute btCollisionObject m_collisionObject;
+    attribute LocalShapeInfo m_localShapeInfo;
+    [Value] attribute btVector3 m_hitNormalLocal;
+    attribute float m_hitFraction;
+};
+
+[Prefix="btCollisionWorld::"]
+interface RayResultCallback {
+  // abstract base class, no constructor
+  //float addSingleResult([Ref] LocalRayResult rayResult, boolean normalInWorldSpace);
+  boolean hasHit();
+  attribute short m_collisionFilterGroup;
+  attribute short m_collisionFilterMask;
+  [Const] attribute btCollisionObject m_collisionObject;
+};
+
+[JSImplementation="RayResultCallback"]
+interface ConcreteRayResultCallback {
+  void ConcreteRayResultCallback();
+  float addSingleResult([Ref] LocalRayResult rayResult, boolean normalInWorldSpace);
+  //boolean hasHit();
+  //float addSingleResult(boolean thebool);
+};
+
+[Prefix="btCollisionWorld::"]
 interface ContactResultCallback {
-  float addSingleResult([Ref] btManifoldPoint cp, [Const] btCollisionObjectWrapper colObj0Wrap, long partId0, long index0, [Const] btCollisionObjectWrapper colObj1Wrap, long partId1, long index1);
+  //float addSingleResult([Ref] btManifoldPoint cp, [Const] btCollisionObjectWrapper colObj0Wrap, long partId0, long index0, [Const] btCollisionObjectWrapper colObj1Wrap, long partId1, long index1);
 };
 
 [JSImplementation="ContactResultCallback"]
@@ -136,6 +230,22 @@ interface ConcreteContactResultCallback {
   void ConcreteContactResultCallback();
   float addSingleResult([Ref] btManifoldPoint cp, [Const] btCollisionObjectWrapper colObj0Wrap, long partId0, long index0, [Const] btCollisionObjectWrapper colObj1Wrap, long partId1, long index1);
 };
+
+[Prefix="btCollisionWorld::"]
+interface ClosestRayResultCallback {
+  void ClosestRayResultCallback([Const, Ref] btVector3 from, [Const, Ref] btVector3 to);
+  [Value] attribute btVector3 m_rayFromWorld;
+  [Value] attribute btVector3 m_rayToWorld;
+  [Value] attribute btVector3 m_hitNormalWorld;
+  [Value] attribute btVector3 m_hitPointWorld;
+};
+ClosestRayResultCallback implements RayResultCallback;
+
+//[JSImplementation="ClosestRayResultCallback"]
+//interface ConcreteClosestRayResultCallback {
+//  void ConcreteClosestRayResultCallback();
+//  float addSingleResult([Ref] LocalRayResult rayResult, boolean normalInWorldSpace);
+//};
 
 [Prefix="btCollisionWorld::"]
 interface LocalShapeInfo {
@@ -181,6 +291,15 @@ interface btCollisionShape {
 interface btConvexShape {
 };
 btConvexShape implements btCollisionShape;
+
+interface btConvex2dShape {
+  void btConvex2dShape(btConvexShape convexChildShape);
+  void calculateLocalInertia(float mass, [Ref] btVector3 inertia);
+  void setMargin(float margin);
+  btConvexShape getChildShape();
+  void getAabb([Ref] btTransform t, [Ref] btVector3 aabbMin, [Ref] btVector3 aabbMax);
+};
+btConvex2dShape implements btConvexShape;
 
 interface btConvexTriangleMeshShape {
   void btConvexTriangleMeshShape(btStridingMeshInterface meshInterface, optional boolean calcAabb);
@@ -235,6 +354,8 @@ btConeShape implements btCollisionShape;
 interface btConvexHullShape {
   void btConvexHullShape();
   void addPoint([Const, Ref] btVector3 point, optional boolean recalculateLocalAABB);
+  long getNumVertices();
+  void getVertex(long index, [Ref] btVector3 vec);
 };
 btConvexHullShape implements btCollisionShape;
 
@@ -304,6 +425,7 @@ interface btDispatcher {
 
 interface btCollisionDispatcher {
   void btCollisionDispatcher(btDefaultCollisionConfiguration conf);
+  void registerCollisionCreateFunc(long proxyType0, long proxyType1, btCollisionAlgorithmCreateFunc createFunc);
 };
 btCollisionDispatcher implements btDispatcher;
 
@@ -369,7 +491,9 @@ interface btRigidBody {
   void setLinearVelocity([Const, Ref] btVector3 lin_vel);
   void setAngularVelocity([Const, Ref] btVector3 ang_vel);
   btMotionState getMotionState();
+  float getInvMass();
   void setAngularFactor([Const, Ref] btVector3 angularFactor);
+  [Value] btQuaternion getOrientation();
   btRigidBody upcast([Const] btCollisionObject colObj);
 };
 btRigidBody implements btCollisionObject;

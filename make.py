@@ -3,9 +3,16 @@
 import os, sys, re, json, shutil
 from subprocess import Popen, PIPE, STDOUT
 
+import time
+
 # Definitions
 
 INCLUDES = ['btBulletDynamicsCommon.h', os.path.join('BulletCollision', 'CollisionShapes', 'btHeightfieldTerrainShape.h'), os.path.join('BulletCollision', 'CollisionDispatch', 'btGhostObject.h'), os.path.join('BulletDynamics', 'Character', 'btKinematicCharacterController.h')]
+INCLUDES = INCLUDES + [os.path.join('BulletCollision', 'NarrowPhaseCollision', 'btMinkowskiPenetrationDepthSolver.h')];
+INCLUDES = INCLUDES + [os.path.join('BulletCollision', 'CollisionDispatch', 'btConvex2dConvex2dAlgorithm.h')];
+INCLUDES = INCLUDES + [os.path.join('BulletCollision', 'CollisionDispatch', 'btBox2dBox2dCollisionAlgorithm.h')];
+INCLUDES = INCLUDES + [os.path.join('BulletCollision', 'CollisionShapes', 'btConvex2dShape.h')];
+#INCLUDES = INCLUDES + [os.path.join('..', '..', 'root.h')];
 
 # Startup
 
@@ -86,6 +93,8 @@ try:
   Popen([emscripten.PYTHON, os.path.join(EMSCRIPTEN_ROOT, 'tools', 'webidl_binder.py'), os.path.join(this_dir, 'ammo.idl'), 'glue']).communicate()
   assert os.path.exists('glue.js')
   assert os.path.exists('glue.cpp')
+  print "Sleeping"
+  time.sleep(10);
 
   stage('Build bindings')
 
@@ -95,37 +104,24 @@ try:
   emscripten.Building.emcc('glue.cpp', args, 'glue.bc')
   assert(os.path.exists('glue.bc'))
 
-  # Configure with CMake on Windows, and with configure on Unix.
-  cmake_build = emscripten.WINDOWS
+  if not os.path.exists('config.h'):
+    stage('Configure (if this fails, run autogen.sh in bullet/ first)')
 
-  if cmake_build:
-    if not os.path.exists('CMakeCache.txt'):
-      stage('Configure via CMake')
-      emscripten.Building.configure([emscripten.PYTHON, os.path.join(EMSCRIPTEN_ROOT, 'emcmake'), 'cmake', '..', '-DBUILD_DEMOS=OFF', '-DBUILD_EXTRAS=OFF', '-DBUILD_CPU_DEMOS=OFF', '-DUSE_GLUT=OFF', '-DCMAKE_BUILD_TYPE=Release'])
-  else:
-    if not os.path.exists('config.h'):
-      stage('Configure (if this fails, run autogen.sh in bullet/ first)')
-      emscripten.Building.configure(['../configure', '--disable-demos','--disable-dependency-tracking'])
+    emscripten.Building.configure(['../configure', '--disable-demos','--disable-dependency-tracking'])
 
   stage('Make')
 
-  if emscripten.WINDOWS:
-    emscripten.Building.make(['mingw32-make', '-j'])
-  else:
-    emscripten.Building.make(['make', '-j'])
+  emscripten.Building.make(['make', '-j'])
 
   stage('Link')
 
-  if cmake_build:
-    bullet_libs = [os.path.join('src', 'BulletDynamics', 'libBulletDynamics.a'),
-                   os.path.join('src', 'BulletCollision', 'libBulletCollision.a'),
-                   os.path.join('src', 'LinearMath', 'libLinearMath.a')]
-  else:
-    bullet_libs = [os.path.join('src', '.libs', 'libBulletDynamics.a'),
-                   os.path.join('src', '.libs', 'libBulletCollision.a'),
-                   os.path.join('src', '.libs', 'libLinearMath.a')]
-
-  emscripten.Building.link(['glue.bc'] + bullet_libs, 'libbullet.bc')
+  emscripten.Building.link([
+                            'glue.bc',
+                            os.path.join('src', '.libs', 'libBulletDynamics.a'),
+                            os.path.join('src', '.libs', 'libBulletCollision.a'),
+                            os.path.join('src', '.libs', 'libLinearMath.a')
+                           ],
+                           'libbullet.bc')
   assert os.path.exists('libbullet.bc')
 
   stage('emcc: ' + ' '.join(emcc_args))
